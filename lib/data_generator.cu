@@ -3,7 +3,7 @@
 #include <math.h>
 
 
-#define N_DEFINED 1
+#define N_DEFINED 2
 
 #define CUDA_CHECK(cudaStatus)                                      \
     if(cudaStatus != cudaSuccess)                                   \
@@ -23,12 +23,13 @@ void generate_data(int N, int n, int n_classes, float *data, int *labels) {
         mi[i] = (float)rand() / RAND_MAX;
     }
 
-    // we represent only the upper triangular part of the matrix
+
+    // we represent only the lower triangular part of the matrix
     float sigma[n_classes * n * (n + 1) / 2];
     for (int i = 0; i < n_classes * n * (n + 1) / 2; i++) {
         sigma[i] = (float)rand() / RAND_MAX;
     }
-    
+
     // allocate memory on the device
     int bytes_for_data = N * n_classes * n * sizeof(float);
     float* d_data;
@@ -60,7 +61,7 @@ void generate_data(int N, int n, int n_classes, float *data, int *labels) {
     // generate data and labels
     generate_data_kernel<<<blocks, threads>>>(N, n, n_classes, d_mi, d_sigma, d_data, d_labels, d_state);
 
-
+    cudaDeviceSynchronize();
     // copy the data and labels from the device to the host
     CUDA_CHECK(cudaMemcpy(data, d_data, bytes_for_data, cudaMemcpyDeviceToHost));
     CUDA_CHECK(cudaMemcpy(labels, d_labels, bytes_for_labels, cudaMemcpyDeviceToHost));
@@ -70,8 +71,6 @@ void generate_data(int N, int n, int n_classes, float *data, int *labels) {
     CUDA_CHECK(cudaFree(d_labels));
     CUDA_CHECK(cudaFree(d_mi));
     CUDA_CHECK(cudaFree(d_sigma));
-
-    printf("Data generated\n");
 }
 
 __device__ float standardNormal(curandState state) {
@@ -117,6 +116,6 @@ __global__ void generate_data_kernel(int N, int n, int n_classes, float* mi, flo
         for (int j = 0; j <= i; j++) {
             transformed_sample[i] += sigma[class_idx + n_classes * (i * (i + 1) / 2 + j)] * sample[j];
         }
-        data[class_idx + i * N * n_classes] = transformed_sample[i];
+        data[idx + i * N * n_classes] = transformed_sample[i];
     }
 }
