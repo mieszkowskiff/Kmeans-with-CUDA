@@ -1,13 +1,64 @@
-#include "data_generator.h"
-#include "iostream"
 #include <math.h>
-
+#include <curand_kernel.h>
+#include <iostream>
 
 #define N_DEFINED 2
 
 #define CUDA_CHECK(cudaStatus)                                      \
     if(cudaStatus != cudaSuccess)                                   \
         std::cout << cudaGetErrorString(cudaStatus) << std::endl;   \
+
+
+__device__ float standardNormal(curandState state) {
+    float u1 = curand_uniform(&state);
+    float u2 = curand_uniform(&state);
+    return sqrt(-2.0 * log(u1)) * cos(2.0 * M_PI * u2);
+}
+
+
+__global__ void generate_data_kernel(int N, int n, int n_classes, float* mi, float* sigma, float* data, int* labels, curandState* states) {
+    // this function generates random data for the classification problem
+    // N - number of points for each class
+    // n - number of features
+    // n_classes - number of classes
+    // mi - pointer to the mi array
+    // sigma - pointer to the sigma array
+    // data - pointer to the data array
+    // labels - pointer to the labels array
+
+    
+
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx >= N * n_classes) {
+        return;
+    }
+
+    curand_init(1234, idx, 0, &states[idx]);
+
+    int class_idx = idx / N;
+    
+    labels[idx] = class_idx;
+    
+
+    // generate random data
+    float sample[N_DEFINED];
+    for (int i = 0; i < n; i++) {
+        sample[i] = standardNormal(states[idx]);
+    }
+
+    // transform sample to desired distribution
+    float transformed_sample[N_DEFINED];
+    for (int i = 0; i < n; i++) {
+        transformed_sample[i] = mi[class_idx + i * n_classes];
+        for (int j = 0; j <= i; j++) {
+            transformed_sample[i] += sigma[class_idx + n_classes * (i * (i + 1) / 2 + j)] * sample[j];
+        }
+        data[idx + i * N * n_classes] = transformed_sample[i];
+    }
+}
+
+
+
 
 void generate_data(int N, int n, int n_classes, float *data, int *labels) {
     // this function generates random data for the classification problem
@@ -71,51 +122,4 @@ void generate_data(int N, int n, int n_classes, float *data, int *labels) {
     CUDA_CHECK(cudaFree(d_labels));
     CUDA_CHECK(cudaFree(d_mi));
     CUDA_CHECK(cudaFree(d_sigma));
-}
-
-__device__ float standardNormal(curandState state) {
-    float u1 = curand_uniform(&state);
-    float u2 = curand_uniform(&state);
-    return sqrt(-2.0 * log(u1)) * cos(2.0 * M_PI * u2);
-}
-
-__global__ void generate_data_kernel(int N, int n, int n_classes, float* mi, float* sigma, float* data, int* labels, curandState* states) {
-    // this function generates random data for the classification problem
-    // N - number of points for each class
-    // n - number of features
-    // n_classes - number of classes
-    // mi - pointer to the mi array
-    // sigma - pointer to the sigma array
-    // data - pointer to the data array
-    // labels - pointer to the labels array
-
-    
-
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (idx >= N * n_classes) {
-        return;
-    }
-
-    curand_init(1234, idx, 0, &states[idx]);
-
-    int class_idx = idx / N;
-    
-    labels[idx] = class_idx;
-    
-
-    // generate random data
-    float sample[N_DEFINED];
-    for (int i = 0; i < n; i++) {
-        sample[i] = standardNormal(states[idx]);
-    }
-
-    // transform sample to desired distribution
-    float transformed_sample[N_DEFINED];
-    for (int i = 0; i < n; i++) {
-        transformed_sample[i] = mi[class_idx + i * n_classes];
-        for (int j = 0; j <= i; j++) {
-            transformed_sample[i] += sigma[class_idx + n_classes * (i * (i + 1) / 2 + j)] * sample[j];
-        }
-        data[idx + i * N * n_classes] = transformed_sample[i];
-    }
 }

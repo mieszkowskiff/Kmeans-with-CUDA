@@ -1,5 +1,5 @@
 #include "stdio.h"
-#include "lib/data_generator.h"
+#include "helper.h"
 
 
 #define N_DEFINED 2 // for now we need to fix the number of features

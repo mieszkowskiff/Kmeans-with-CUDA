@@ -1,23 +1,45 @@
-# Minimum required version of CMake
-cmake_minimum_required(VERSION 3.18)
+cmake_minimum_required(VERSION 3.18) # Wymagane dla obsługi CUDA w CMake
+project(MyCudaProject LANGUAGES CXX CUDA)
 
-# Project name and specify that it's a CUDA project
-project(KMeans LANGUAGES CUDA)
+cmake_minimum_required(VERSION 3.18) # Wymagane dla CUDA i nowoczesnego CMake
+project(KMeans LANGUAGES CXX CUDA)
 
-# Set the CUDA standard (optional)
+# Ustaw wersję standardu C++ i CUDA
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CUDA_STANDARD 14)
-set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 
-set(SOURCES
-    main.cu
-    ./lib/data_generator.cu
-    ./lib/data_generator.h
+# Źródła projektu
+set(CPP_SOURCES
+    main.cpp
+    display.cpp
 )
 
+set(CUDA_SOURCES
+    data_generator.cu
+)
 
+# Dodaj katalogi z nagłówkami
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-# Add the CUDA source file
-add_executable(KMeans ${SOURCES})
+# Znajdź SDL2
+find_package(SDL2 REQUIRED)
 
-# Specify any required CUDA options if needed
-set_target_properties(KMeans PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+# Dodaj katalogi SDL2
+include_directories(${SDL2_INCLUDE_DIRS})
+
+# Utwórz plik wykonywalny z plików C++ i CUDA
+add_executable(KMeans ${CPP_SOURCES} ${CUDA_SOURCES})
+
+# Linkowanie SDL2
+target_link_libraries(KMeans PRIVATE ${SDL2_LIBRARIES})
+
+# Ustawienie flag kompilatora dla CUDA (opcjonalne)
+set_target_properties(KMeans PROPERTIES
+    CUDA_SEPARABLE_COMPILATION ON # Umożliwia oddzielną kompilację plików CUDA
+)
+
+# Opcjonalne flagi do debugowania i optymalizacji
+target_compile_options(KMeans PRIVATE
+    $<$<COMPILE_LANGUAGE:CUDA>:--use_fast_math>
+    $<$<COMPILE_LANGUAGE:CXX>:-Wall -Wextra -Wpedantic>
+)
