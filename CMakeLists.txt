@@ -16,6 +16,7 @@ set(CPP_SOURCES
 
 set(CUDA_SOURCES
     data_generator.cu
+    KMeans.cu
 )
 
 # Dodaj katalogi z nagłówkami

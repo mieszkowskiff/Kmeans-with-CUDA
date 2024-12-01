@@ -21,5 +21,13 @@ int main() {
    
 
     display_data(N * n_classes, n, data, labels);
+    int k = 4;
+    float centroids[n * k] = {
+        0.0, 0.0, 1.0, 1.0,
+        0.0, 1.0, 0.0, 1.0
+    };
+    
+
+    k_means(N * n_classes, n, data, k, centroids); 
     return 0;
 }
