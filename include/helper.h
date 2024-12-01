@@ -1,10 +1,10 @@
 #ifndef HELPER_H
 #define HELPER_H
 
-// Deklaracja funkcji pomocniczej
+//declaration of display_data
 void display_data(int N, int n, float* data, int* labels);
 
-// Deklaracja funkcji z kernel.cu
+// Declaration of kernel wrapper
 void generate_data(int N, int n, int n_classes, float *data, int *labels);
 
 #endif // HELPER_H

@@ -1,2 +1,4 @@
 build/
 help/
+.venv/
+python_test/

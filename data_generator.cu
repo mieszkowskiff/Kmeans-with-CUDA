@@ -1,6 +1,7 @@
 #include <math.h>
 #include <curand_kernel.h>
 #include <iostream>
+#include <ctime>
 
 #define N_DEFINED 2
 
@@ -9,14 +10,23 @@
         std::cout << cudaGetErrorString(cudaStatus) << std::endl;   \
 
 
-__device__ float standardNormal(curandState state) {
-    float u1 = curand_uniform(&state);
-    float u2 = curand_uniform(&state);
+__device__ float standardNormal(curandState* state) {
+    float u1 = curand_uniform(state);
+    float u2 = curand_uniform(state);
     return sqrt(-2.0 * log(u1)) * cos(2.0 * M_PI * u2);
 }
 
 
-__global__ void generate_data_kernel(int N, int n, int n_classes, float* mi, float* sigma, float* data, int* labels, curandState* states) {
+__global__ void generate_data_kernel(
+    int N, 
+    int n, 
+    int n_classes, 
+    float* mi, 
+    float* sigma, 
+    float* data, 
+    int* labels, 
+    curandState* states,
+    unsigned long long seed) {
     // this function generates random data for the classification problem
     // N - number of points for each class
     // n - number of features
@@ -33,7 +43,7 @@ __global__ void generate_data_kernel(int N, int n, int n_classes, float* mi, flo
         return;
     }
 
-    curand_init(1234, idx, 0, &states[idx]);
+    curand_init(idx + seed, idx, 0, &states[idx]);
 
     int class_idx = idx / N;
     
@@ -43,7 +53,7 @@ __global__ void generate_data_kernel(int N, int n, int n_classes, float* mi, flo
     // generate random data
     float sample[N_DEFINED];
     for (int i = 0; i < n; i++) {
-        sample[i] = standardNormal(states[idx]);
+        sample[i] = standardNormal(&states[idx]);
     }
 
     // transform sample to desired distribution
@@ -68,18 +78,21 @@ void generate_data(int N, int n, int n_classes, float *data, int *labels) {
     // data - pointer to the data array
     // labels - pointer to the labels array
 
+
+    std::srand(static_cast<unsigned>(std::time(0)));
     // generate random mi and sigma
     float mi[n_classes * n];
     for (int i = 0; i < n_classes * n; i++) {
-        mi[i] = (float)rand() / RAND_MAX;
+        mi[i] = ((float)rand() / RAND_MAX - 0.5) * 2;
     }
 
 
     // we represent only the lower triangular part of the matrix
     float sigma[n_classes * n * (n + 1) / 2];
     for (int i = 0; i < n_classes * n * (n + 1) / 2; i++) {
-        sigma[i] = (float)rand() / RAND_MAX;
+        sigma[i] = ((float)rand() / RAND_MAX - 0.5) * 0.5;
     }
+
 
     // allocate memory on the device
     int bytes_for_data = N * n_classes * n * sizeof(float);
@@ -91,6 +104,7 @@ void generate_data(int N, int n, int n_classes, float *data, int *labels) {
     CUDA_CHECK(cudaMalloc((void**)&d_data, bytes_for_data));
     CUDA_CHECK(cudaMalloc((void**)&d_labels, bytes_for_labels));
 
+    
 
     // allocate memory for mi and sigma on the device
     float* d_mi;
@@ -110,7 +124,11 @@ void generate_data(int N, int n, int n_classes, float *data, int *labels) {
     curandState* d_state;
     CUDA_CHECK(cudaMalloc((void**)&d_state, N * n_classes * sizeof(curandState)));
     // generate data and labels
-    generate_data_kernel<<<blocks, threads>>>(N, n, n_classes, d_mi, d_sigma, d_data, d_labels, d_state);
+
+    unsigned long long seed = static_cast<unsigned long long>(time(NULL));
+    printf("seed: %llu\n", seed);
+
+    generate_data_kernel<<<blocks, threads>>>(N, n, n_classes, d_mi, d_sigma, d_data, d_labels, d_state, seed);
 
     cudaDeviceSynchronize();
     // copy the data and labels from the device to the host
@@ -122,4 +140,5 @@ void generate_data(int N, int n, int n_classes, float *data, int *labels) {
     CUDA_CHECK(cudaFree(d_labels));
     CUDA_CHECK(cudaFree(d_mi));
     CUDA_CHECK(cudaFree(d_sigma));
+    CUDA_CHECK(cudaFree(d_state));
 }
