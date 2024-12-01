@@ -89,9 +89,33 @@ void generate_data(int N, int n, int n_classes, float *data, int *labels) {
 
     // we represent only the lower triangular part of the matrix
     float sigma[n_classes * n * (n + 1) / 2];
-    for (int i = 0; i < n_classes * n * (n + 1) / 2; i++) {
-        sigma[i] = ((float)rand() / RAND_MAX - 0.5) * 0.5;
+    for(int k = 0; k < n_classes; k++) {
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < i; j++) {
+                sigma[k + n_classes * (i * (i + 1) / 2 + j)] = 0;
+            }
+            sigma[k + n_classes * (i * (i + 1) / 2 + i)] = ((float)rand() / RAND_MAX) * 0.3;
+        }
     }
+
+    /*
+    for(int k = 0; k < n_classes; k++) {
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < n; j++) {
+                if (j <= i) {
+                    printf("%f ", sigma[k + n_classes * (i * (i + 1) / 2 + j)]);
+                } else {
+                    printf("0 ");
+                }
+            }
+            printf("\n");
+        }
+        printf("\n");
+    }
+    */
+
+
+
 
 
     // allocate memory on the device

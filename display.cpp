@@ -2,13 +2,27 @@
 #include <iostream>
 #include <SDL2/SDL.h>
 
+int colors[10][3] = {
+    {255, 0, 0},
+    {0, 255, 0},
+    {0, 0, 255},
+    {255, 255, 0},
+    {255, 0, 255},
+    {0, 255, 255},
+    {128, 0, 0},
+    {0, 128, 0},
+    {0, 0, 128},
+    {128, 128, 0}
+};
 
 
 void display_data(int N, int n, float* data, int* labels) {
-    float min_x = -3;
-    float max_x = 3;
-    float min_y = -3;
-    float max_y = 3;
+
+    float size = 3;
+    float min_x = -size;
+    float max_x = size;
+    float min_y = -size;
+    float max_y = size;
 
     int screen_width = 1000;
     int screen_height = 1000;
@@ -38,16 +52,9 @@ void display_data(int N, int n, float* data, int* labels) {
             int x = (data[i] - min_x) / (max_x - min_x) * screen_width;
             int y = (data[i + N] - min_y) / (max_y - min_y) * screen_height;
             int label = labels[i];
-            int r = 0;
-            int g = 0;
-            int b = 0;
-            if (label == 0) {
-                r = 255;
-            } else if (label == 1) {
-                g = 255;
-            } else {
-                b = 255;
-            }
+            int r = colors[label][0];
+            int g = colors[label][1];
+            int b = colors[label][2];
             SDL_SetRenderDrawColor(renderer, r, g, b, 255);
             SDL_Rect rect = {x, y, 10, 10};
             SDL_RenderFillRect(renderer, &rect);

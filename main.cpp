@@ -7,7 +7,7 @@
 int main() {
     int N = 100; // numbers of points for each class
     int n = N_DEFINED; // number of features
-    int n_classes = 3; // number of classes
+    int n_classes = 4; // number of classes
     float data[N * n_classes * n];
     int labels[N * n_classes];
     
