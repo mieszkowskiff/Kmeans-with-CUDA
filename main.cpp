@@ -21,24 +21,17 @@ int main() {
     // display_data(N * n_classes, n, data, labels);
 
 
-    int k = 2;
+    int k = 4;
     float centroids[n * k] = {
-        0.0, 0.0,
-        -1.0, 1.0
+        1.0, 1.0, -1.0, -1.0,
+        1.0, -1.0, 1.0, -1.0
     };
-
+    int predicted_labels[N * n_classes];
     display_data_with_centroids(N * n_classes, n, data, labels, centroids, k);
     
-
-    k_means(N * n_classes, n, data, k, centroids, 1);
-
-    display_data_with_centroids(N * n_classes, n, data, labels, centroids, k);
-
-    for (int i = 0; i < k; i++) {
-        printf("Centroid %d: %f %f\n", i, centroids[i], centroids[i + k]);
+    for(int j = 0; j < 5; j++) {
+        k_means(N * n_classes, n, data, k, centroids, 2, predicted_labels);
+        display_data_with_centroids(N * n_classes, n, data, predicted_labels, centroids, k);
     }
-    
-
-
     return 0;
 }
