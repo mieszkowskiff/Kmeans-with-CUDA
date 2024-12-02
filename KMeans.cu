@@ -57,7 +57,9 @@ __global__ void k_means_step(
     int k, 
     float* old_centroids, 
     float* new_centroids,
-    int* centroid_count
+    int* centroid_count,
+    int* labels,
+    bool* changed
     ) {
     // this function performs one step of the k-means algorithm
     // N - number of data points
@@ -76,30 +78,7 @@ __global__ void k_means_step(
         atomicAdd(&new_centroids[min_index + k * i], data[idx + N * i]);
     }
     atomicAdd(&centroid_count[min_index], 1);
-}
-
-__global__ void assign_labels(
-    float* data, 
-    int N, 
-    int n, 
-    float* centroids, 
-    int k, 
-    int* labels
-) {
-    // this function assigns labels to the data points
-    // data - pointer to the data array
-    // N - number of data points
-    // n - number of features
-    // centroids - pointer to the centroids array
-    // k - number of centroids
-    // labels - pointer to the labels array
-
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (idx >= N) {
-         return;
-    }
-    labels[idx] = find_nearest_centroid(data, N, idx, centroids, k, n);
-
+    labels[idx] = min_index;
 }
 
 __global__ void divide(float* centroids, int k, int* centroid_count, int n, float* old_centroids) {
@@ -141,11 +120,15 @@ void k_means(int N, int n, float* data, float k, float* centroids, int iteration
     // Transfer the data to the device
     CUDA_CHECK(cudaMemcpy(d_data, data, N * n * sizeof(float), cudaMemcpyHostToDevice));
 
-    int* centroid_count;
-    CUDA_CHECK(cudaMalloc(&centroid_count, k * sizeof(int)));
+    int* d_centroid_count;
+    CUDA_CHECK(cudaMalloc(&d_centroid_count, k * sizeof(int)));
 
     int* d_labels;
     CUDA_CHECK(cudaMalloc(&d_labels, N * sizeof(int)));
+
+
+    bool* d_changed;
+    CUDA_CHECK(cudaMalloc(&d_changed, sizeof(bool)));
 
 
     // number of threads for calculating distances to the centroids
@@ -157,19 +140,39 @@ void k_means(int N, int n, float* data, float k, float* centroids, int iteration
     int divide_blocks = k * n / divide_threads + 1;
 
     for(int i = 0; i < iterations; i++) {
-        CUDA_CHECK(cudaMemset(centroid_count, 0, k * sizeof(int)));
+        CUDA_CHECK(cudaMemset(d_centroid_count, 0, k * sizeof(int)));
         if (i % 2 == 0) {
             CUDA_CHECK(cudaMemset(d_centroids2, 0, k * n * sizeof(float)));
             cudaDeviceSynchronize();
-            k_means_step<<<iter_blocks, iter_threads>>>(N, n, d_data, k, d_centroids1, d_centroids2, centroid_count);
+            k_means_step<<<iter_blocks, iter_threads>>>(
+                N, 
+                n, 
+                d_data, 
+                k, 
+                d_centroids1, 
+                d_centroids2, 
+                d_centroid_count, 
+                d_labels,
+                d_changed
+                );
             cudaDeviceSynchronize();
-            divide<<<divide_blocks, divide_threads>>>(d_centroids2, k, centroid_count, n, d_centroids1);
+            divide<<<divide_blocks, divide_threads>>>(d_centroids2, k, d_centroid_count, n, d_centroids1);
         } else {
             CUDA_CHECK(cudaMemset(d_centroids1, 0, k * n * sizeof(float)));
             cudaDeviceSynchronize();
-            k_means_step<<<iter_blocks, iter_threads>>>(N, n, d_data, k, d_centroids2, d_centroids1, centroid_count);
+            k_means_step<<<iter_blocks, iter_threads>>>(
+                N, 
+                n, 
+                d_data, 
+                k, 
+                d_centroids2, 
+                d_centroids1, 
+                d_centroid_count,
+                d_labels,
+                d_changed
+                );
             cudaDeviceSynchronize();
-            divide<<<divide_blocks, divide_threads>>>(d_centroids1, k, centroid_count, n, d_centroids2);
+            divide<<<divide_blocks, divide_threads>>>(d_centroids1, k, d_centroid_count, n, d_centroids2);
         }
         cudaDeviceSynchronize();
     }
@@ -178,10 +181,8 @@ void k_means(int N, int n, float* data, float k, float* centroids, int iteration
     // depending on the iteration number, the score will be at centroid 1 or 2
     if (iterations % 2 == 0) {
         CUDA_CHECK(cudaMemcpy(centroids, d_centroids1, k * n * sizeof(float), cudaMemcpyDeviceToHost));
-        assign_labels<<<iter_blocks, iter_threads>>>(d_data, N, n, d_centroids1, k, d_labels);
     } else {
         CUDA_CHECK(cudaMemcpy(centroids, d_centroids2, k * n * sizeof(float), cudaMemcpyDeviceToHost));
-        assign_labels<<<iter_blocks, iter_threads>>>(d_data, N, n, d_centroids2, k, d_labels);
     }
 
     
@@ -193,6 +194,6 @@ void k_means(int N, int n, float* data, float k, float* centroids, int iteration
     CUDA_CHECK(cudaFree(d_data));
     CUDA_CHECK(cudaFree(d_centroids1));
     CUDA_CHECK(cudaFree(d_centroids2));
-    CUDA_CHECK(cudaFree(centroid_count));
+    CUDA_CHECK(cudaFree(d_centroid_count));
     CUDA_CHECK(cudaFree(d_labels));
 }
