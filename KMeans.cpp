@@ -1,171 +1,100 @@
-#include "helper.h"
-#include <cmath>
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
 
 #define EPS 0.0001
 
-float distance_cpu(
-    float* points, 
-    long N, 
-    int point_index, 
-    float* centroids, 
-    int k, 
-    int centroid_index, 
-    int n
-    ){
-    // this function calculates the distance between a point and a centroid
-    // points - pointer to the points array
-    // N - number of points
-    // point_index - index of the point
-    // centroids - pointer to the centroids array
-    // k - number of centroids
-    // n - number of features
-    float sum = 0;
-    for(int i = 0; i < n; i++) {
-        sum += (points[point_index + N * i] - centroids[centroid_index + k * i]) * (points[point_index + N * i] - centroids[centroid_index + k * i]);
+float distance_squared(const float *a, const float *b, int n) {
+    float dist = 0.0;
+    for (int i = 0; i < n; i++) {
+        float diff = a[i] - b[i];
+        dist += diff * diff;
     }
-    return sum;
+    return dist;
 }
 
-int find_nearest_centroid_cpu(
-    float* data, 
-    long N, 
-    int idx, 
-    float* centroids, 
-    int k, 
-    int n
-) {
-    int min_index = 0;
-    float min_distance = distance_cpu(data, N, idx, centroids, k, 0, n);
-    float current_distance;
-    for(int i = 1; i < k; i++) {
-        current_distance = distance_cpu(data, N, idx, centroids, k, i, n);
-        if(current_distance < min_distance) {
-            min_distance = current_distance;
-            min_index = i;
-        } 
-    }
-    return min_index;
-}
+// K-means clustering algorithm
+void k_means_cpu(long N, int n, float *data, int k, float *centroids, int* iterations, int *labels) {
+    int max_iterations = *iterations;
+    int changed = 1; // Flag to check if centroids are still moving
 
-void k_means_step_cpu(
-    long N, 
-    int n, 
-    float* data, 
-    int k, 
-    float* old_centroids, 
-    float* new_centroids,
-    int* centroid_count,
-    int idx
-    ) {
-    // this function performs one step of the k-means algorithm
-    // N - number of data points
-    // n - number of features
-    // data - pointer to the data array
-    // old_centroids - pointer to the old centroids array
-    // new_centroids - pointer to the new centroids array
+    float *new_centroids = (float*)calloc(k * n, sizeof(float)); // To store updated centroids
+    int *cluster_sizes = (int*)calloc(k, sizeof(int));           // To count points in each cluster
+    float old_centroid_distance;
 
-    int min_index = find_nearest_centroid_cpu(data, N, idx, old_centroids, k, n);
+    for (int iter = 0; iter < max_iterations && changed; iter++) {
+        // Reset flags for this iteration
+        changed = 0;
+        for (int i = 0; i < k * n; i++) new_centroids[i] = 0.0;
+        for (int i = 0; i < k; i++) cluster_sizes[i] = 0;
 
-    for(int i = 0; i < n; i++) {
-        new_centroids[min_index + k * i] += data[idx + N * i];
-    }
-    centroid_count[min_index] += 1;
-}
+        // Step 1: Assign each point to the nearest centroid
+        for (long i = 0; i < N; i++) {
+            float min_distance = INFINITY;
+            int best_cluster = 0;
 
-void generate_label_cpu(
-    long N, 
-    int n, 
-    float* data, 
-    int k, 
-    float* centroids, 
-    int* labels,
-    int idx
-) {
-    // this function generates the labels for the data points
-    // N - number of data points
-    // n - number of features
-    // data - pointer to the data array
-    // k - number of centroids
-    // centroids - pointer to the centroids array
-    // labels - pointer to the labels array
-    labels[idx] = find_nearest_centroid_cpu(data, N, idx, centroids, k, n);
-}
-
-void divide_cpu(
-    float* centroids, 
-    int k, 
-    int* centroid_count, 
-    int n, 
-    float* old_centroids, 
-    bool* changed,
-    int idx
-    ) {
-    // this function divides the sum of the points by the number of points
-    // centroids - pointer to the centroids array
-    // k - number of centroids
-    // centroid_count - pointer to the centroid count array
-    // n - number of features
-    if (centroid_count[idx % k] == 0) {
-        centroids[idx] = old_centroids[idx];
-    } else {
-        centroids[idx] /= centroid_count[idx % k]; // idx % k
-    }
-    if (std::abs(centroids[idx] - old_centroids[idx]) > EPS) {
-        *changed = true;
-    }
-}
-
-void k_means_cpu(long N, int n, float *data, float k, float *centroids, int* iterations, int *labels) {
-
-    float* centroids2 = (float *)malloc(k * n * sizeof(float));
-    for(int i = 0; i < k * n; i++) {
-        centroids2[i] = 0;
-    }
-    
-
-    int* centroid_count = (int *)malloc(k * sizeof(int));
-    for(int i = 0; i < k; i++) {
-        centroid_count[i] = 0;
-    }
-
-    bool* changed = new bool;
-    *changed = false;
-
-
-    for(int i = 0; i != *iterations; i++) {
-        if (i % 2 == 0) {
-            for(int j = 0; j < N; j++) {
-                k_means_step_cpu(N, n, data, k, centroids, centroids2, centroid_count, j);
-            }
-            for(int j = 0; j < k * n; j++) {
-                divide_cpu(centroids2, k, centroid_count, n, centroids, changed, j);
-            }
-        } else {
-            for(int j = 0; j < N; j++) {
-                k_means_step_cpu(N, n, data, k, centroids2, centroids, centroid_count, j);
+            for (int c = 0; c < k; c++) {
+                float dist = 0.0;
+                for (int d = 0; d < n; d++) {
+                    float diff = data[d * N + i] - centroids[d * k + c];
+                    dist += diff * diff;
+                }
+                if (dist < min_distance) {
+                    min_distance = dist;
+                    best_cluster = c;
+                }
             }
 
-            for(int j = 0; j < k * n; j++) {
-                divide_cpu(centroids, k, centroid_count, n, centroids2, changed, j);
+            labels[i] = best_cluster; // Assign label to point i
+
+            // Accumulate new centroids
+            for (int d = 0; d < n; d++) {
+                new_centroids[d * k + best_cluster] += data[d * N + i];
+            }
+            cluster_sizes[best_cluster]++;
+        }
+
+        // Step 2: Update centroids by averaging
+        for (int c = 0; c < k; c++) {
+            for (int d = 0; d < n; d++) {
+                if (cluster_sizes[c] > 0) {
+                    new_centroids[d * k + c] /= cluster_sizes[c];
+                } else {
+                    new_centroids[d * k + c] = centroids[d * k + c]; // Keep the old centroid if no points
+                }
             }
         }
-        if (!*changed) {
-            *iterations = i;
+
+        // Step 3: Check if centroids have moved more than EPS
+        changed = 0; // Reset changed flag at the start of the check
+        for (int c = 0; c < k; c++) {
+            float centroid_diff = 0.0;
+            for (int d = 0; d < n; d++) {
+                float diff = centroids[d * k + c] - new_centroids[d * k + c];
+                centroid_diff += diff * diff;
+            }
+            for (int d = 0; d < n; d++) {
+                float diff = fabs(centroids[d * k + c] - new_centroids[d * k + c]);
+                if (diff > EPS) {
+                    changed = 1; // Mark as changed if any axis moves more than EPS
+                }
+            }
+        }
+
+        // Step 4: Copy new centroids to centroids array
+        for (int i = 0; i < k * n; i++) {
+            centroids[i] = new_centroids[i];
+        }
+
+        if (!changed) {
+            *iterations = iter;
             break;
-
-        }
-    }
-    // depending on the iteration number, the score will be at centroid 1 or 2
-    if (*iterations % 2) {
-        for(int i = 0; i < k * n; i++) {
-            centroids[i] = centroids2[i];
         }
     }
 
-    // generate the labels
-    for(int i = 0; i < N; i++) {
-        generate_label_cpu(N, n, data, k, centroids, labels, i);
-    }
+    // Set the total number of iterations performed
 
-    free(centroids2);
+    // Cleanup
+    free(new_centroids);
+    free(cluster_sizes);
 }
