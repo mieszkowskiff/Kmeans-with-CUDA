@@ -16,7 +16,7 @@ int colors[10][3] = {
 };
 
 
-void display_data(int N, int n, float* data, int* labels) {
+void display_data(long N, int n, float* data, int* labels) {
 
     float size = 3;
     float min_x = -size;
@@ -68,7 +68,7 @@ void display_data(int N, int n, float* data, int* labels) {
 }
 
 
-void display_data_with_centroids(int N, int n, float* data, int* labels, float* centroids, int k) {
+void display_data_with_centroids(long N, int n, float* data, int* labels, float* centroids, int k) {
     
     float size = 3;
 

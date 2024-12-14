@@ -18,7 +18,7 @@ __device__ float standardNormal(curandState* state) {
 
 
 __global__ void generate_data_kernel(
-    int N, 
+    long N, 
     int n, 
     int n_classes, 
     float* mi, 
@@ -70,7 +70,7 @@ __global__ void generate_data_kernel(
 
 
 
-void generate_data(int N, int n, int n_classes, float *data, int *labels, float spread, float skewness) {
+void generate_data(long N, int n, int n_classes, float *data, int *labels, float spread, float skewness) {
     // this function generates random data for the classification problem
     // N - number of points for each class
     // n - number of features

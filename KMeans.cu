@@ -10,7 +10,7 @@
 
 __device__ float distance(
     float* points, 
-    int N, 
+    long N, 
     int point_index, 
     float* centroids, 
     int k, 
@@ -33,7 +33,7 @@ __device__ float distance(
 
 __device__ int find_nearest_centroid(
     float* data, 
-    int N, 
+    long N, 
     int idx, 
     float* centroids, 
     int k, 
@@ -53,7 +53,7 @@ __device__ int find_nearest_centroid(
 }
 
 __global__ void k_means_step(
-    int N, 
+    long N, 
     int n, 
     float* data, 
     int k, 
@@ -81,7 +81,7 @@ __global__ void k_means_step(
 }
 
 __global__ void generate_label(
-    int N, 
+    long N, 
     int n, 
     float* data, 
     int k, 
@@ -122,7 +122,7 @@ __global__ void divide(float* centroids, int k, int* centroid_count, int n, floa
     }
 }
 
-void k_means(int N, int n, float* data, float k, float* centroids, int* iterations, int* labels) {
+void k_means(long N, int n, float* data, float k, float* centroids, int* iterations, int* labels) {
     
     // Allocate memory for the old centroids
     float* d_centroids1;
