@@ -5,7 +5,7 @@
 void display_data(int N, int n, float* data, int* labels);
 
 // Declaration of kernel wrapper
-void generate_data(int N, int n, int n_classes, float *data, int *labels);
+void generate_data(int N, int n, int n_classes, float *data, int *labels, float spread, float skewness);
 
 void display_data_with_centroids(int N, int n, float* data, int* labels, float* centroids, int k);
 

@@ -70,7 +70,7 @@ __global__ void generate_data_kernel(
 
 
 
-void generate_data(int N, int n, int n_classes, float *data, int *labels) {
+void generate_data(int N, int n, int n_classes, float *data, int *labels, float spread, float skewness) {
     // this function generates random data for the classification problem
     // N - number of points for each class
     // n - number of features
@@ -83,7 +83,7 @@ void generate_data(int N, int n, int n_classes, float *data, int *labels) {
     // generate random mi and sigma
     float mi[n_classes * n];
     for (int i = 0; i < n_classes * n; i++) {
-        mi[i] = ((float)rand() / RAND_MAX - 0.5) * 2;
+        mi[i] = ((float)rand() / RAND_MAX - 0.5) * spread;
     }
 
 
@@ -92,29 +92,13 @@ void generate_data(int N, int n, int n_classes, float *data, int *labels) {
     for(int k = 0; k < n_classes; k++) {
         for (int i = 0; i < n; i++) {
             for (int j = 0; j < i; j++) {
-                sigma[k + n_classes * (i * (i + 1) / 2 + j)] = 0;
+                // non diagonal elements
+                sigma[k + n_classes * (i * (i + 1) / 2 + j)] = ((float)rand() / RAND_MAX) * skewness;
             }
-            sigma[k + n_classes * (i * (i + 1) / 2 + i)] = ((float)rand() / RAND_MAX) * 0.3;
+            // diagonal elements
+            sigma[k + n_classes * (i * (i + 1) / 2 + i)] = 0.2 + ((float)rand() / RAND_MAX) * 0.1;
         }
     }
-
-    /*
-    for(int k = 0; k < n_classes; k++) {
-        for (int i = 0; i < n; i++) {
-            for (int j = 0; j < n; j++) {
-                if (j <= i) {
-                    printf("%f ", sigma[k + n_classes * (i * (i + 1) / 2 + j)]);
-                } else {
-                    printf("0 ");
-                }
-            }
-            printf("\n");
-        }
-        printf("\n");
-    }
-    */
-
-
 
 
 

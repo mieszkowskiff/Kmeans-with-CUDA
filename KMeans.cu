@@ -5,6 +5,8 @@
     if(cudaStatus != cudaSuccess)                                   \
         std::cout << cudaGetErrorString(cudaStatus) << std::endl;   \
 
+#define EPS 0.0001
+
 
 __device__ float distance(
     float* points, 
@@ -115,7 +117,7 @@ __global__ void divide(float* centroids, int k, int* centroid_count, int n, floa
     } else {
         centroids[idx] /= centroid_count[idx % k]; // idx % k
     }
-    if (centroids[idx] != old_centroids[idx]) {
+    if (abs(centroids[idx] - old_centroids[idx]) > EPS) {
         *changed = true;
     }
 }
