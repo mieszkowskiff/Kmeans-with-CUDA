@@ -7,7 +7,7 @@
 int main() {
     int N = 10; // numbers of points for each class
     int n = N_DEFINED; // number of features
-    int n_classes = 4; // number of classes
+    int n_classes = 10; // number of classes
     float data[N * n_classes * n];
     int labels[N * n_classes];
     
@@ -29,9 +29,10 @@ int main() {
     int predicted_labels[N * n_classes];
     display_data_with_centroids(N * n_classes, n, data, labels, centroids, k);
     
-    for(int j = 0; j < 5; j++) {
-        k_means(N * n_classes, n, data, k, centroids, 2, predicted_labels);
-        display_data_with_centroids(N * n_classes, n, data, predicted_labels, centroids, k);
-    }
+    int iterations[1] = {100000};
+    k_means(N * n_classes, n, data, k, centroids, iterations, predicted_labels);
+
+    display_data_with_centroids(N * n_classes, n, data, predicted_labels, centroids, k);
+    printf("Iterations: %d\n", iterations[0]);
     return 0;
 }

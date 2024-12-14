@@ -57,9 +57,7 @@ __global__ void k_means_step(
     int k, 
     float* old_centroids, 
     float* new_centroids,
-    int* centroid_count,
-    int* labels,
-    bool* changed
+    int* centroid_count
     ) {
     // this function performs one step of the k-means algorithm
     // N - number of data points
@@ -78,10 +76,31 @@ __global__ void k_means_step(
         atomicAdd(&new_centroids[min_index + k * i], data[idx + N * i]);
     }
     atomicAdd(&centroid_count[min_index], 1);
-    labels[idx] = min_index;
 }
 
-__global__ void divide(float* centroids, int k, int* centroid_count, int n, float* old_centroids) {
+__global__ void generate_label(
+    int N, 
+    int n, 
+    float* data, 
+    int k, 
+    float* centroids, 
+    int* labels
+) {
+    // this function generates the labels for the data points
+    // N - number of data points
+    // n - number of features
+    // data - pointer to the data array
+    // k - number of centroids
+    // centroids - pointer to the centroids array
+    // labels - pointer to the labels array
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx >= N) {
+        return;
+    }
+    labels[idx] = find_nearest_centroid(data, N, idx, centroids, k, n);
+}
+
+__global__ void divide(float* centroids, int k, int* centroid_count, int n, float* old_centroids, bool* changed) {
     // this function divides the sum of the points by the number of points
     // centroids - pointer to the centroids array
     // k - number of centroids
@@ -96,10 +115,12 @@ __global__ void divide(float* centroids, int k, int* centroid_count, int n, floa
     } else {
         centroids[idx] /= centroid_count[idx % k]; // idx % k
     }
-    
+    if (centroids[idx] != old_centroids[idx]) {
+        *changed = true;
+    }
 }
 
-void k_means(int N, int n, float* data, float k, float* centroids, int iterations, int* labels) {
+void k_means(int N, int n, float* data, float k, float* centroids, int* iterations, int* labels) {
     
     // Allocate memory for the old centroids
     float* d_centroids1;
@@ -126,7 +147,7 @@ void k_means(int N, int n, float* data, float k, float* centroids, int iteration
     int* d_labels;
     CUDA_CHECK(cudaMalloc(&d_labels, N * sizeof(int)));
 
-
+    bool* h_changed = new bool;
     bool* d_changed;
     CUDA_CHECK(cudaMalloc(&d_changed, sizeof(bool)));
 
@@ -139,8 +160,9 @@ void k_means(int N, int n, float* data, float k, float* centroids, int iteration
     int divide_threads = 1024;
     int divide_blocks = k * n / divide_threads + 1;
 
-    for(int i = 0; i < iterations; i++) {
+    for(int i = 0; i != *iterations; i++) {
         CUDA_CHECK(cudaMemset(d_centroid_count, 0, k * sizeof(int)));
+        CUDA_CHECK(cudaMemset(d_changed, false, sizeof(bool)));
         if (i % 2 == 0) {
             CUDA_CHECK(cudaMemset(d_centroids2, 0, k * n * sizeof(float)));
             cudaDeviceSynchronize();
@@ -151,12 +173,10 @@ void k_means(int N, int n, float* data, float k, float* centroids, int iteration
                 k, 
                 d_centroids1, 
                 d_centroids2, 
-                d_centroid_count, 
-                d_labels,
-                d_changed
+                d_centroid_count
                 );
             cudaDeviceSynchronize();
-            divide<<<divide_blocks, divide_threads>>>(d_centroids2, k, d_centroid_count, n, d_centroids1);
+            divide<<<divide_blocks, divide_threads>>>(d_centroids2, k, d_centroid_count, n, d_centroids1, d_changed);
         } else {
             CUDA_CHECK(cudaMemset(d_centroids1, 0, k * n * sizeof(float)));
             cudaDeviceSynchronize();
@@ -167,28 +187,31 @@ void k_means(int N, int n, float* data, float k, float* centroids, int iteration
                 k, 
                 d_centroids2, 
                 d_centroids1, 
-                d_centroid_count,
-                d_labels,
-                d_changed
+                d_centroid_count
                 );
             cudaDeviceSynchronize();
-            divide<<<divide_blocks, divide_threads>>>(d_centroids1, k, d_centroid_count, n, d_centroids2);
+            divide<<<divide_blocks, divide_threads>>>(d_centroids1, k, d_centroid_count, n, d_centroids2, d_changed);
         }
         cudaDeviceSynchronize();
+        CUDA_CHECK(cudaMemcpy(h_changed, d_changed, sizeof(bool), cudaMemcpyDeviceToHost));
+        cudaDeviceSynchronize();
+        if (!*h_changed) {
+            *iterations = i;
+            break;
+
+        }
     }
-
-
     // depending on the iteration number, the score will be at centroid 1 or 2
-    if (iterations % 2 == 0) {
-        CUDA_CHECK(cudaMemcpy(centroids, d_centroids1, k * n * sizeof(float), cudaMemcpyDeviceToHost));
-    } else {
+    if (*iterations % 2) {
         CUDA_CHECK(cudaMemcpy(centroids, d_centroids2, k * n * sizeof(float), cudaMemcpyDeviceToHost));
+    } else {
+        CUDA_CHECK(cudaMemcpy(centroids, d_centroids1, k * n * sizeof(float), cudaMemcpyDeviceToHost));
     }
 
-    
-
+    // generate the labels
+    generate_label<<<iter_blocks, iter_threads>>>(N, n, d_data, k, *iterations % 2 ? d_centroids2 : d_centroids1, d_labels);
+    cudaDeviceSynchronize();
     CUDA_CHECK(cudaMemcpy(labels, d_labels, N * sizeof(int), cudaMemcpyDeviceToHost));
-
 
 
     CUDA_CHECK(cudaFree(d_data));
