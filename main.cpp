@@ -8,9 +8,9 @@
 #define n_DEFINED 2 // number of features must be fixed for data generation
 
 int main() {
-    long N = 1000000; // numbers of points for each class
+    long N = 100; // numbers of points for each class
     int n = n_DEFINED; // number of features
-    int n_classes = 4; // number of classes
+    int n_classes = 5; // number of classes
     float* data = (float *)malloc(N * n_classes * n * sizeof(float));
     int* labels = (int *)malloc(N * n_classes * sizeof(int));
     float spread = 5;
@@ -37,7 +37,7 @@ int main() {
     int iterations[1] = {100};
 
     auto k_means_time_start = std::chrono::high_resolution_clock::now();
-    k_means(N * n_classes, n, data, k, centroids, iterations, predicted_labels);
+    k_means_cpu(N * n_classes, n, data, k, centroids, iterations, predicted_labels);
     auto k_means_time_end = std::chrono::high_resolution_clock::now();
 
     std::chrono::duration<double> k_means_time_duration = k_means_time_end - k_means_time_start;
@@ -45,6 +45,11 @@ int main() {
 
     display_data_with_centroids(N * n_classes, n, data, predicted_labels, centroids, k);
     printf("Iterations: %d\n", *iterations);
+
+    free(data);
+    free(labels);
+    free(predicted_labels);
+    free(centroids);
     
     return 0;
 }

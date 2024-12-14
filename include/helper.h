@@ -11,6 +11,6 @@ void display_data_with_centroids(long N, int n, float* data, int* labels, float*
 
 void k_means(long N, int n, float *data, float k, float *centroids, int* iterations, int *labels);
 
-
+void k_means_cpu(long N, int n, float *data, float k, float *centroids, int* iterations, int *labels);
 
 #endif // HELPER_H

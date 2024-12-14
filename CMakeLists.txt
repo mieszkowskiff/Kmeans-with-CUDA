@@ -12,6 +12,7 @@ set(CMAKE_CUDA_STANDARD 14)
 set(CPP_SOURCES
     main.cpp
     display.cpp
+    KMeans.cpp
 )
 
 set(CUDA_SOURCES
