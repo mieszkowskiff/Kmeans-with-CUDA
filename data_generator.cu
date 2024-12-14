@@ -3,7 +3,7 @@
 #include <iostream>
 #include <ctime>
 
-#define N_DEFINED 2
+#define n_DEFINED 2
 
 #define CUDA_CHECK(cudaStatus)                                      \
     if(cudaStatus != cudaSuccess)                                   \
@@ -51,13 +51,13 @@ __global__ void generate_data_kernel(
     
 
     // generate random data
-    float sample[N_DEFINED];
+    float sample[n_DEFINED];
     for (int i = 0; i < n; i++) {
         sample[i] = standardNormal(&states[idx]);
     }
 
     // transform sample to desired distribution
-    float transformed_sample[N_DEFINED];
+    float transformed_sample[n_DEFINED];
     for (int i = 0; i < n; i++) {
         transformed_sample[i] = mi[class_idx + i * n_classes];
         for (int j = 0; j <= i; j++) {

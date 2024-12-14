@@ -3,12 +3,12 @@
 #include <stdlib.h>
 
 
-#define N_DEFINED 2 // for now we need to fix the number of features
+#define n_DEFINED 2 // number of features must be fixed for data generation
 
 int main() {
-    long N = 1000000; // numbers of points for each class
-    int n = N_DEFINED; // number of features
-    int n_classes = 4; // number of classes
+    long N = 10000; // numbers of points for each class
+    int n = n_DEFINED; // number of features
+    int n_classes = 20; // number of classes
     float* data = (float *)malloc(N * n_classes * n * sizeof(float));
     int* labels = (int *)malloc(N * n_classes * sizeof(int));
     float spread = 5;
@@ -31,7 +31,7 @@ int main() {
     k_means(N * n_classes, n, data, k, centroids, iterations, predicted_labels);
 
     display_data_with_centroids(N * n_classes, n, data, predicted_labels, centroids, k);
-    printf("Iterations: %d\n", iterations[0]);
+    printf("Iterations: %d\n", *iterations);
     
     return 0;
 }
