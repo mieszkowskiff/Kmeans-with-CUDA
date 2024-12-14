@@ -8,9 +8,9 @@
 #define n_DEFINED 2 // number of features must be fixed for data generation
 
 int main() {
-    long N = 100000; // numbers of points for each class
+    long N = 1000000; // numbers of points for each class
     int n = n_DEFINED; // number of features
-    int n_classes = 5; // number of classes
+    int n_classes = 20; // number of classes
     float* data = (float *)malloc(N * n_classes * n * sizeof(float));
     int* labels = (int *)malloc(N * n_classes * sizeof(int));
     float spread = 5;
