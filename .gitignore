@@ -1,4 +1,5 @@
 build/
 help/
-.venv/
-python_test/
+ploting/small_data.csv
+ploting/big_data.csv
+.vscode/

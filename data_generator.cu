@@ -134,7 +134,6 @@ void generate_data(long N, int n, int n_classes, float *data, int *labels, float
     // generate data and labels
 
     unsigned long long seed = static_cast<unsigned long long>(time(NULL));
-    printf("seed: %llu\n", seed);
 
     generate_data_kernel<<<blocks, threads>>>(N, n, n_classes, d_mi, d_sigma, d_data, d_labels, d_state, seed);
 

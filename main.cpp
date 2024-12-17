@@ -3,11 +3,12 @@
 #include <stdlib.h>
 #include <iostream>
 #include <chrono>
+#include <fstream>
 
 
 #define n_DEFINED 2 // number of features must be fixed for data generation
 
-int main() {
+int main2() {
     long N = 1000000; // numbers of points for each class
     int n = n_DEFINED; // number of features
     int n_classes = 20; // number of classes
@@ -81,6 +82,97 @@ int main() {
     free(labels);
     free(predicted_labels);
 
+
+    return 0;
+}
+
+
+int main() {
+    int n = n_DEFINED; // number of features
+    int n_classes = 10; // number of classes
+    float* data;
+    int* labels;
+    float spread = 5;
+    float skewness = 0.2;
+    int k = 4;
+    int iterations[1] = {1000};
+    float centroids[n * k] = {
+        1.0, 1.0, -1.0, -1.0,
+        1.0, -1.0, 1.0, -1.0
+    };
+    std::chrono::duration<double> k_means_time_duration_gpu;
+    std::chrono::duration<double> k_means_time_duration_cpu;
+    std::chrono::duration<double> data_creation_time_duration;
+
+    auto k_means_time_start_gpu = std::chrono::high_resolution_clock::now();
+    auto k_means_time_end_gpu = std::chrono::high_resolution_clock::now();
+    auto k_means_time_start_cpu = std::chrono::high_resolution_clock::now();
+    auto k_means_time_end_cpu = std::chrono::high_resolution_clock::now();
+    auto data_creation_time_start = std::chrono::high_resolution_clock::now();
+    auto data_creation_time_end = std::chrono::high_resolution_clock::now();
+
+
+    std::ofstream outFile; // Create an output file stream object
+    const std::string filename = "result2.txt";
+
+    if (!outFile) {
+        std::cerr << "Error: File could not be opened!" << std::endl;
+        return 1;
+    }
+
+    // Open the file in write mode
+    outFile.open(filename);
+    for(int N = 228000; N < 1000000; N = N + 1000) {
+        iterations[0] = 1000;
+
+        centroids[0] = 1.0;
+        centroids[1] = 1.0;
+        centroids[2] = -1.0;
+        centroids[3] = -1.0;
+        centroids[4] = 1.0;
+        centroids[5] = -1.0;
+        centroids[6] = 1.0;
+        centroids[7] = -1.0;
+
+        data = (float *)malloc(N * n_classes * n * sizeof(float));
+        labels = (int *)malloc(N * n_classes * sizeof(int));
+
+        data_creation_time_start = std::chrono::high_resolution_clock::now();
+        generate_data(N, n, n_classes, data, labels, spread, skewness);
+        data_creation_time_end = std::chrono::high_resolution_clock::now();
+
+        data_creation_time_duration = data_creation_time_end - data_creation_time_start;
+
+        k_means_time_start_gpu = std::chrono::high_resolution_clock::now();
+        k_means(N * n_classes, n, data, k, centroids, iterations, labels);
+        k_means_time_end_gpu = std::chrono::high_resolution_clock::now();
+
+        k_means_time_duration_gpu = k_means_time_end_gpu - k_means_time_start_gpu;
+
+        iterations[0] = 1000;
+
+        centroids[0] = 1.0;
+        centroids[1] = 1.0;
+        centroids[2] = -1.0;
+        centroids[3] = -1.0;
+        centroids[4] = 1.0;
+        centroids[5] = -1.0;
+        centroids[6] = 1.0;
+        centroids[7] = -1.0;
+
+        k_means_time_start_cpu = std::chrono::high_resolution_clock::now();
+        k_means_cpu(N * n_classes, n, data, k, centroids, iterations, labels);
+        k_means_time_end_cpu = std::chrono::high_resolution_clock::now();
+
+        k_means_time_duration_cpu = k_means_time_end_cpu - k_means_time_start_cpu;
+
+        free(data);
+        free(labels);
+        outFile << N << ";" << data_creation_time_duration.count() << ";" << k_means_time_duration_gpu.count() << ";" << k_means_time_duration_cpu.count() << ";" << *iterations << std::endl;
+
+    }
+    outFile.flush();
+    outFile.close();
 
     return 0;
 }
