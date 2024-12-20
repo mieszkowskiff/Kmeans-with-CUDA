@@ -4,14 +4,14 @@
 #include <iostream>
 #include <chrono>
 #include <fstream>
-
+#include <memory>
 
 #define n_DEFINED 2 // number of features must be fixed for data generation
 
-int main2() {
+int main() {
     long N = 1000000; // numbers of points for each class
     int n = n_DEFINED; // number of features
-    int n_classes = 20; // number of classes
+    int n_classes = 4; // number of classes
     float* data = (float *)malloc(N * n_classes * n * sizeof(float));
     int* labels = (int *)malloc(N * n_classes * sizeof(int));
     float spread = 5;
@@ -28,10 +28,17 @@ int main2() {
 
     
     int k = 4;
-    float centroids[n * k] = {
-        1.0, 1.0, -1.0, -1.0,
-        1.0, -1.0, 1.0, -1.0
-    };
+    float* centroids = new float[n * k];
+
+    centroids[0] = 1.0;
+    centroids[1] = 1.0;
+    centroids[2] = -1.0;
+    centroids[3] = -1.0;
+    centroids[4] = 1.0;
+    centroids[5] = -1.0;
+    centroids[6] = 1.0;
+    centroids[7] = -1.0;
+
     int* predicted_labels = (int *)malloc(N * n_classes * sizeof(int));
     display_data_with_centroids(N * n_classes, n, data, labels, centroids, k);
     
@@ -81,13 +88,14 @@ int main2() {
     free(data);
     free(labels);
     free(predicted_labels);
+    delete[] centroids;
 
 
     return 0;
 }
 
 
-int main() {
+int create_data_for_experiments() {
     int n = n_DEFINED; // number of features
     int n_classes = 10; // number of classes
     float* data;
@@ -96,10 +104,7 @@ int main() {
     float skewness = 0.2;
     int k = 4;
     int iterations[1] = {1000};
-    float centroids[n * k] = {
-        1.0, 1.0, -1.0, -1.0,
-        1.0, -1.0, 1.0, -1.0
-    };
+    float* centroids = new float[n * k];
     std::chrono::duration<double> k_means_time_duration_gpu;
     std::chrono::duration<double> k_means_time_duration_cpu;
     std::chrono::duration<double> data_creation_time_duration;
@@ -113,7 +118,7 @@ int main() {
 
 
     std::ofstream outFile; // Create an output file stream object
-    const std::string filename = "result2.txt";
+    const std::string filename = "result.txt";
 
     if (!outFile) {
         std::cerr << "Error: File could not be opened!" << std::endl;
