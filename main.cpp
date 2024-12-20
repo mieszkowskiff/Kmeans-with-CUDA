@@ -10,10 +10,12 @@
 
 int main() {
     long N = 1000000; // numbers of points for each class
-    int n = n_DEFINED; // number of features
-    int n_classes = 4; // number of classes
+    int n = n_DEFINED; // number of features 
+    int n_classes = 4; // number of classes (20 at most, because of the color palette)
     float* data = (float *)malloc(N * n_classes * n * sizeof(float));
     int* labels = (int *)malloc(N * n_classes * sizeof(int));
+
+    // parameters for data generation
     float spread = 5;
     float skewness = 0.25;
     
@@ -30,6 +32,7 @@ int main() {
     int k = 4;
     float* centroids = new float[n * k];
 
+    // Centroids initialization
     centroids[0] = 1.0;
     centroids[1] = 1.0;
     centroids[2] = -1.0;
@@ -127,6 +130,8 @@ int create_data_for_experiments() {
 
     // Open the file in write mode
     outFile.open(filename);
+
+    // Change these values to get the desired range of N
     for(int N = 228000; N < 1000000; N = N + 1000) {
         iterations[0] = 1000;
 
